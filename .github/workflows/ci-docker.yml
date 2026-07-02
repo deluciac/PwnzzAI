@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -39,7 +40,9 @@ jobs:
   docker-build:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -54,11 +57,11 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -t ghcr.io/${{ github.repository_owner }}/pwnzzai:latest \
-            -t ghcr.io/${{ github.repository_owner }}/pwnzzai:${{ github.sha }} \
+            -t ghcr.io/owasp/pwnzzai:latest \
+            -t ghcr.io/owasp/pwnzzai:${{ github.sha }} \
             .
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/pwnzzai:latest
-          docker push ghcr.io/${{ github.repository_owner }}/pwnzzai:${{ github.sha }}
+          docker push ghcr.io/owasp/pwnzzai:latest
+          docker push ghcr.io/owasp/pwnzzai:${{ github.sha }}
