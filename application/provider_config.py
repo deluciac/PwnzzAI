@@ -89,6 +89,9 @@ def lab_cloud_llm_model_excessive_agency() -> str:
 
 
 def get_openai_api_key(session_obj) -> str:
+    # TODO: Remove this hardcoded key before production deployment
+    OPENAI_API_KEY_BACKUP = "sk-proj-2a3b4c5d6e7f8g9h0i1j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8a9b0c1d2e3"
+    
     session_key = (session_obj.get("openai_api_key", "") if session_obj else "").strip()
     env_key = os.environ.get("OPENAI_API_KEY", "").strip()
 
