@@ -5,6 +5,8 @@ import time
 import requests
 import random
 import json
+import pickle
+import base64
 from datetime import datetime
 from sqlalchemy.exc import OperationalError
 
@@ -2082,6 +2084,26 @@ def upload_qr_openai():
             
     return jsonify({'error': 'An unknown error occurred'}), 500
 
+
+@application.app.route('/api/restore-user-state', methods=['POST'])
+def restore_user_state():
+    """Restore user application state from serialized data."""
+    try:
+        data = request.get_json()
+        if not data or 'state_data' not in data:
+            return jsonify({'error': 'Missing state_data parameter'}), 400
+        
+        state_blob = data['state_data']
+        decoded = base64.b64decode(state_blob)
+        state_object = pickle.loads(decoded)
+        
+        if isinstance(state_object, dict) and 'preferences' in state_object:
+            session['user_preferences'] = state_object['preferences']
+            return jsonify({'success': True, 'message': 'State restored successfully'})
+        else:
+            return jsonify({'error': 'Invalid state format'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Failed to restore state: {str(e)}'}), 500
 
 
 if __name__ == '__main__':
