@@ -1,17 +1,18 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 language: "en-US"
 tone_instructions: >-
-  Be concise, evidence-based, and security-first. Lead with exploitable impact,
-  distinguish intentional labs from regressions, and suppress cosmetic feedback.
+  Be concise and security-first. Prioritize exploitable flaws and containment
+  failures; omit cosmetic comments unless they affect security, correctness,
+  or the lab's learning objective.
 
 reviews:
-  profile: "assertive"
+  profile: "chill"
   request_changes_workflow: false
   high_level_summary: true
   high_level_summary_instructions: >-
-    Summarize the security-relevant data flows, trust-boundary changes, affected
-    labs, scanner findings, test evidence, and deployment impact. Separate
-    intentional vulnerable behavior from unintended risk.
+    Start with a Security impact section. State whether the PR changes an
+    intentional lab vulnerability, trusted platform code, deployment exposure,
+    secrets, dependencies, or security tests.
   review_status: true
   review_details: true
 
@@ -24,117 +25,49 @@ reviews:
       - "WIP"
       - "[skip review]"
 
-  pre_merge_checks:
-    custom_checks:
-      - name: "Intentional vulnerability containment"
-        mode: "warning"
-        instructions: |
-          Pass when each changed deliberate weakness is tied to a named learning
-          objective and remains contained to its lab. Fail when the change can
-          affect shared routes, unrelated users, the host filesystem or network,
-          real credentials or data, or secure/hardened examples. Do not fail only
-          because the documented teaching vulnerability is exploitable.
-
-      - name: "Security evidence"
-        mode: "warning"
-        instructions: |
-          Pass when security-sensitive behavior changes include relevant tests or
-          a clear PR explanation showing how existing tests cover both intended
-          exploit behavior and containment. Fail when authentication,
-          authorization, input/output handling, LLM tool execution, secrets,
-          dependencies, or deployment exposure changes without relevant evidence.
-
   path_instructions:
     - path: "**/*"
       instructions: |
-        Prioritize exploitable security defects and trust-boundary regressions.
-        Rank findings Critical, High, Medium, or Low. Include attack preconditions,
-        reachable data flow, impact, evidence, and a minimally disruptive fix.
-        Treat synthetic demo data differently from real credentials or PII.
+        PwnzzAI is deliberately insecure for education. Prioritize security,
+        then correctness, then maintainability. Rank actionable findings as
+        Critical, High, Medium, or Low. Explain the attack path, impact,
+        evidence, and smallest safe remediation. Do not report style-only issues.
 
     - path: "application/vulnerabilities/**"
       instructions: |
-        Preserve the named training vulnerability. Review for unintended adjacent
-        vulnerabilities, cross-user or cross-lab impact, persistence beyond the
-        exercise, external side effects, missing cleanup, and divergence between
-        vulnerable and hardened paths. Require clear lab scope and safety bounds.
+        The advertised weakness in each lab is intentional. Do not flag it
+        solely because it exists. Flag unintended or undocumented weakness
+        classes, escape from the lab boundary, exposure of real secrets or data,
+        harmful external side effects, insecure behavior becoming a default
+        outside the lab, broken exploitability, or weakened hardened examples.
 
     - path: "application/*.py"
       instructions: |
-        Treat framework, routing, provider, model, and shared service code as the
-        trusted platform. Scrutinize authn/authz, IDOR, sessions, CSRF, injection,
-        SSRF, file handling, deserialization, secret storage, provider selection,
-        LLM timeouts/retries, cost bounds, and least-privilege tool execution.
+        Treat shared application code as the trusted platform. Focus on
+        authentication, authorization, IDOR, session and CSRF handling,
+        SQL/command/template injection, SSRF, path traversal, unsafe
+        deserialization or upload, secret handling, error leakage, resource
+        limits, LLM timeouts, and tool permissions.
 
     - path: "application/templates/**"
       instructions: |
-        Review Jinja escaping, unsafe filters, DOM/JavaScript sinks, URL handling,
-        CSRF, model-output rendering, and whether deliberate XSS is confined to a
-        documented lab rather than shared templates.
+        Check Jinja autoescaping, unsafe filters, HTML/JavaScript/URL
+        interpolation, CSRF on state-changing forms, and safe rendering of model
+        output. Allow deliberate XSS only when clearly confined to a named lab.
 
-    - path: "application/prompts/**"
+    - path: "**/prompts/**"
       instructions: |
-        Review system/user/tool role separation, untrusted RAG context, prompt
-        leakage, secret material, indirect injection, output validation, tool
-        authorization, and token/cost/resource limits.
-
-    - path: "prompts/**"
-      instructions: |
-        Treat prompt-attack content as test material. Flag real secrets, unsafe
-        external actions, undocumented privilege, or content that escapes the
-        intended exercise boundary.
+        Prompt injection or prompt leakage may be the lesson. Flag real secrets,
+        undocumented trust-boundary changes, unsafe tool authority, untrusted
+        retrieved context crossing into system instructions, or missing bounds
+        on external calls and model consumption.
 
     - path: "tests/**"
       instructions: |
-        Expect regression tests for exploitability, containment, cross-user access,
-        hardened behavior, malformed inputs, and failure cleanup. Prefer tests that
-        prove both the lesson and the safety boundary.
-
-    - path: "requirements*.txt"
-      instructions: |
-        Prioritize known vulnerable packages, dependency confusion or typosquats,
-        unsafe source URLs, incompatible security upgrades, and unjustified new
-        AI/provider dependencies. Distinguish runtime from test-only dependencies.
-
-    - path: "Dockerfile*"
-      instructions: |
-        Review base-image provenance, secret leakage, package pinning, privilege,
-        writable paths, exposed services, build context, and safe local-lab defaults.
-
-    - path: "docker-compose*.yml"
-      instructions: |
-        Review public port exposure, privileged or host access, dangerous mounts,
-        secret propagation, network boundaries, resource limits, and whether the
-        intentionally vulnerable app remains local by default.
-
-    - path: ".github/workflows/**"
-      instructions: |
-        Review token permissions, untrusted PR execution, script injection,
-        third-party action pinning, artifact handling, cache poisoning, and secret
-        exposure to forked pull requests.
-
-  tools:
-    gitleaks:
-      enabled: true
-    opengrep:
-      enabled: true
-    osvScanner:
-      enabled: true
-    trivy:
-      enabled: true
-    ruff:
-      enabled: true
-    shellcheck:
-      enabled: true
-    hadolint:
-      enabled: true
-    actionlint:
-      enabled: true
-    zizmor:
-      enabled: true
-    github-checks:
-      enabled: true
-      timeout_ms: 120000
+        For lab changes, expect tests for both intended exploit behavior and
+        containment. For trusted-platform changes, expect negative tests for
+        authentication, authorization, validation, data exposure, and failures.
+        Do not recommend fixing a lab by removing its learning objective.
 
 chat:
   auto_reply: true
