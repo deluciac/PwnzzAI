@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, jsonify, session, flash, Response, stream_with_context
+from flask import render_template, request, redirect, url_for, jsonify, session, flash, Response, stream_with_context, send_file
 import os
 import math
 import time
@@ -2104,6 +2104,18 @@ def restore_user_state():
             return jsonify({'error': 'Invalid state format'}), 400
     except Exception as e:
         return jsonify({'error': f'Failed to restore state: {str(e)}'}), 500
+
+
+@application.app.route('/api/reports/download')
+def download_report():
+    """Download a generated support report by filename."""
+    report_name = request.args.get('name', 'example.txt')
+    report_path = os.path.join(application.app.root_path, 'reports', report_name)
+
+    try:
+        return send_file(report_path, as_attachment=True)
+    except OSError as exc:
+        return jsonify({'error': f'Unable to download {report_path}: {exc}'}), 404
 
 
 if __name__ == '__main__':
