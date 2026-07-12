@@ -1,35 +1,140 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 language: "en-US"
+tone_instructions: >-
+  Be concise, evidence-based, and security-first. Lead with exploitable impact,
+  distinguish intentional labs from regressions, and suppress cosmetic feedback.
 
 reviews:
-  profile: "chill"          # focuses on real bugs/security issues, not nitpicks
-  request_changes_workflow: true   # blocks approval until flagged issues are addressed
+  profile: "assertive"
+  request_changes_workflow: false
   high_level_summary: true
-  poem: false
+  high_level_summary_instructions: >-
+    Summarize the security-relevant data flows, trust-boundary changes, affected
+    labs, scanner findings, test evidence, and deployment impact. Separate
+    intentional vulnerable behavior from unintended risk.
+  review_status: true
+  review_details: true
+
   auto_review:
     enabled: true
     drafts: false
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 5
+    ignore_title_keywords:
+      - "WIP"
+      - "[skip review]"
 
-  path_filters:
-    - "!**/*.lock"
-    - "!**/dist/**"
-    - "!**/vendor/**"
+  pre_merge_checks:
+    custom_checks:
+      - name: "Intentional vulnerability containment"
+        mode: "warning"
+        instructions: |
+          Pass when each changed deliberate weakness is tied to a named learning
+          objective and remains contained to its lab. Fail when the change can
+          affect shared routes, unrelated users, the host filesystem or network,
+          real credentials or data, or secure/hardened examples. Do not fail only
+          because the documented teaching vulnerability is exploitable.
+
+      - name: "Security evidence"
+        mode: "warning"
+        instructions: |
+          Pass when security-sensitive behavior changes include relevant tests or
+          a clear PR explanation showing how existing tests cover both intended
+          exploit behavior and containment. Fail when authentication,
+          authorization, input/output handling, LLM tool execution, secrets,
+          dependencies, or deployment exposure changes without relevant evidence.
 
   path_instructions:
     - path: "**/*"
-      instructions: >
-        Prioritize security issues: injection vulnerabilities, auth/authz gaps,
-        hardcoded secrets, unsafe deserialization, SSRF, and insecure dependency usage.
-        Flag these even if minor style issues are otherwise ignored.
+      instructions: |
+        Prioritize exploitable security defects and trust-boundary regressions.
+        Rank findings Critical, High, Medium, or Low. Include attack preconditions,
+        reachable data flow, impact, evidence, and a minimally disruptive fix.
+        Treat synthetic demo data differently from real credentials or PII.
+
+    - path: "application/vulnerabilities/**"
+      instructions: |
+        Preserve the named training vulnerability. Review for unintended adjacent
+        vulnerabilities, cross-user or cross-lab impact, persistence beyond the
+        exercise, external side effects, missing cleanup, and divergence between
+        vulnerable and hardened paths. Require clear lab scope and safety bounds.
+
+    - path: "application/*.py"
+      instructions: |
+        Treat framework, routing, provider, model, and shared service code as the
+        trusted platform. Scrutinize authn/authz, IDOR, sessions, CSRF, injection,
+        SSRF, file handling, deserialization, secret storage, provider selection,
+        LLM timeouts/retries, cost bounds, and least-privilege tool execution.
+
+    - path: "application/templates/**"
+      instructions: |
+        Review Jinja escaping, unsafe filters, DOM/JavaScript sinks, URL handling,
+        CSRF, model-output rendering, and whether deliberate XSS is confined to a
+        documented lab rather than shared templates.
+
+    - path: "application/prompts/**"
+      instructions: |
+        Review system/user/tool role separation, untrusted RAG context, prompt
+        leakage, secret material, indirect injection, output validation, tool
+        authorization, and token/cost/resource limits.
+
+    - path: "prompts/**"
+      instructions: |
+        Treat prompt-attack content as test material. Flag real secrets, unsafe
+        external actions, undocumented privilege, or content that escapes the
+        intended exercise boundary.
+
+    - path: "tests/**"
+      instructions: |
+        Expect regression tests for exploitability, containment, cross-user access,
+        hardened behavior, malformed inputs, and failure cleanup. Prefer tests that
+        prove both the lesson and the safety boundary.
+
+    - path: "requirements*.txt"
+      instructions: |
+        Prioritize known vulnerable packages, dependency confusion or typosquats,
+        unsafe source URLs, incompatible security upgrades, and unjustified new
+        AI/provider dependencies. Distinguish runtime from test-only dependencies.
+
+    - path: "Dockerfile*"
+      instructions: |
+        Review base-image provenance, secret leakage, package pinning, privilege,
+        writable paths, exposed services, build context, and safe local-lab defaults.
+
+    - path: "docker-compose*.yml"
+      instructions: |
+        Review public port exposure, privileged or host access, dangerous mounts,
+        secret propagation, network boundaries, resource limits, and whether the
+        intentionally vulnerable app remains local by default.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        Review token permissions, untrusted PR execution, script injection,
+        third-party action pinning, artifact handling, cache poisoning, and secret
+        exposure to forked pull requests.
 
   tools:
-    semgrep:
-      enabled: true          # broad SAST for security bugs
-    gitleaks:                # or betterleaks, its newer replacement
-      enabled: true          # secret scanning
-    osv-scanner:
-      enabled: true          # vulnerable dependency detection
-    checkov:
-      enabled: true          # IaC misconfiguration scanning (if you have Terraform/CFN/etc.)
+    gitleaks:
+      enabled: true
+    opengrep:
+      enabled: true
+    osvScanner:
+      enabled: true
+    trivy:
+      enabled: true
+    ruff:
+      enabled: true
+    shellcheck:
+      enabled: true
+    hadolint:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    github-checks:
+      enabled: true
+      timeout_ms: 120000
 
 chat:
   auto_reply: true
