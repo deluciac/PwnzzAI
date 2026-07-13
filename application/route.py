@@ -34,6 +34,11 @@ from werkzeug.utils import secure_filename
 
 OLLAMA_BASE_URL = OLLAMA_HOST
 _DB_READY_CHECKED = False
+_REPORTS_BY_USER = {
+    1: {
+        'example': 'example.txt',
+    },
+}
 
 
 def _ollama_status_snapshot() -> tuple[bool, list[str], str | None]:
@@ -2124,18 +2129,30 @@ def secure_download_report(report_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Authentication required'}), 401
 
-    available_reports_by_user = {
-        1: {
-            'example': 'example.txt',
-        },
-    }
-    user_reports = available_reports_by_user.get(session['user_id'], {})
+    user_reports = _REPORTS_BY_USER.get(session['user_id'], {})
     report_filename = user_reports.get(report_id)
     if report_filename is None:
         return jsonify({'error': 'Report not found'}), 404
 
     report_path = os.path.join(application.app.root_path, 'reports', report_filename)
     return send_file(report_path, as_attachment=True, download_name=report_filename)
+
+
+@application.app.route('/api/reports')
+def list_reports():
+    """List the reports owned by the authenticated user."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_reports = _REPORTS_BY_USER.get(session['user_id'], {})
+    reports = [
+        {
+            'id': report_id,
+            'download_url': url_for('secure_download_report', report_id=report_id),
+        }
+        for report_id in user_reports
+    ]
+    return jsonify({'reports': reports})
 
 
 if __name__ == '__main__':
