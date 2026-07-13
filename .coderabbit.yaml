@@ -11,8 +11,7 @@ reviews:
     enabled: true
     drafts: false
     ignore_title_keywords:
-      - "WIP"
-      - "[skip review]"
+      - "!do-not-coderabbit-review"
 
   path_filters:
     - "!**/docs/**"
