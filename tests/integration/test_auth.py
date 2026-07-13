@@ -105,6 +105,74 @@ class TestSessionManagement:
         # Should show login requirement
         assert b'login' in response.data.lower() or b'log in' in response.data.lower()
 
+    def test_secure_report_download_requires_login(self, client):
+        response = client.get('/api/reports/example/secure-download')
+
+        assert response.status_code == 401
+
+    def test_secure_report_download_is_scoped_to_owner(self, client):
+        with client.session_transaction() as sess:
+            sess['user_id'] = 2
+
+        response = client.get('/api/reports/example/secure-download')
+
+        assert response.status_code == 404
+
+    def test_secure_report_download_allows_owner(self, authenticated_client):
+        response = authenticated_client.get('/api/reports/example/secure-download')
+
+        assert response.status_code == 200
+        assert response.data == b'Support report export is working.\n'
+
+    def test_report_list_requires_login(self, client):
+        response = client.get('/api/reports')
+
+        assert response.status_code == 401
+
+    def test_report_list_is_scoped_to_owner(self, authenticated_client):
+        response = authenticated_client.get('/api/reports')
+
+        assert response.status_code == 200
+        assert response.get_json() == {
+            'reports': [
+                {
+                    'id': 'example',
+                    'download_url': '/api/reports/example/secure-download',
+                },
+            ],
+        }
+
+    def test_report_list_does_not_expose_other_users_reports(self, client):
+        with client.session_transaction() as sess:
+            sess['user_id'] = 2
+
+        response = client.get('/api/reports')
+
+        assert response.status_code == 200
+        assert response.get_json() == {'reports': []}
+
+    def test_report_metadata_requires_login(self, client):
+        response = client.get('/api/reports/example')
+
+        assert response.status_code == 401
+
+    def test_report_metadata_is_scoped_to_owner(self, client):
+        with client.session_transaction() as sess:
+            sess['user_id'] = 2
+
+        response = client.get('/api/reports/example')
+
+        assert response.status_code == 404
+
+    def test_report_metadata_allows_owner(self, authenticated_client):
+        response = authenticated_client.get('/api/reports/example')
+
+        assert response.status_code == 200
+        assert response.get_json() == {
+            'id': 'example',
+            'download_url': '/api/reports/example/secure-download',
+        }
+
 
 class TestLabSetup:
     """Tests for lab setup API endpoints."""

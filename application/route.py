@@ -1,10 +1,12 @@
-from flask import render_template, request, redirect, url_for, jsonify, session, flash, Response, stream_with_context
+from flask import render_template, request, redirect, url_for, jsonify, session, flash, Response, stream_with_context, send_file
 import os
 import math
 import time
 import requests
 import random
 import json
+import pickle
+import base64
 from datetime import datetime
 from sqlalchemy.exc import OperationalError
 
@@ -32,6 +34,11 @@ from werkzeug.utils import secure_filename
 
 OLLAMA_BASE_URL = OLLAMA_HOST
 _DB_READY_CHECKED = False
+_REPORTS_BY_USER = {
+    1: {
+        'example': 'example.txt',
+    },
+}
 
 
 def _ollama_status_snapshot() -> tuple[bool, list[str], str | None]:
@@ -2082,6 +2089,86 @@ def upload_qr_openai():
             
     return jsonify({'error': 'An unknown error occurred'}), 500
 
+
+@application.app.route('/api/restore-user-state', methods=['POST'])
+def restore_user_state():
+    """Restore user application state from serialized data."""
+    try:
+        data = request.get_json()
+        if not data or 'state_data' not in data:
+            return jsonify({'error': 'Missing state_data parameter'}), 400
+        
+        state_blob = data['state_data']
+        decoded = base64.b64decode(state_blob)
+        state_object = pickle.loads(decoded)
+        
+        if isinstance(state_object, dict) and 'preferences' in state_object:
+            session['user_preferences'] = state_object['preferences']
+            return jsonify({'success': True, 'message': 'State restored successfully'})
+        else:
+            return jsonify({'error': 'Invalid state format'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Failed to restore state: {str(e)}'}), 500
+
+
+@application.app.route('/api/reports/download')
+def download_report():
+    """Download a generated support report by filename."""
+    report_name = request.args.get('name', 'example.txt')
+    report_path = os.path.join(application.app.root_path, 'reports', report_name)
+
+    try:
+        return send_file(report_path, as_attachment=True)
+    except OSError as exc:
+        return jsonify({'error': f'Unable to download {report_path}: {exc}'}), 404
+
+
+@application.app.route('/api/reports/<report_id>/secure-download')
+def secure_download_report(report_id):
+    """Download an allowlisted report for the authenticated user."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_reports = _REPORTS_BY_USER.get(session['user_id'], {})
+    report_filename = user_reports.get(report_id)
+    if report_filename is None:
+        return jsonify({'error': 'Report not found'}), 404
+
+    report_path = os.path.join(application.app.root_path, 'reports', report_filename)
+    return send_file(report_path, as_attachment=True, download_name=report_filename)
+
+
+@application.app.route('/api/reports')
+def list_reports():
+    """List the reports owned by the authenticated user."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_reports = _REPORTS_BY_USER.get(session['user_id'], {})
+    reports = [
+        {
+            'id': report_id,
+            'download_url': url_for('secure_download_report', report_id=report_id),
+        }
+        for report_id in user_reports
+    ]
+    return jsonify({'reports': reports})
+
+
+@application.app.route('/api/reports/<report_id>')
+def get_report(report_id):
+    """Return metadata for a report owned by the authenticated user."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_reports = _REPORTS_BY_USER.get(session['user_id'], {})
+    if report_id not in user_reports:
+        return jsonify({'error': 'Report not found'}), 404
+
+    return jsonify({
+        'id': report_id,
+        'download_url': url_for('secure_download_report', report_id=report_id),
+    })
 
 
 if __name__ == '__main__':
