@@ -14,6 +14,9 @@ reviews:
       - "WIP"
       - "[skip review]"
 
+  path_filters:
+    - "!**/docs/**"
+
   path_instructions:
     - path: "**/*"
       instructions: |
