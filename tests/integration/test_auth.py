@@ -151,6 +151,28 @@ class TestSessionManagement:
         assert response.status_code == 200
         assert response.get_json() == {'reports': []}
 
+    def test_report_metadata_requires_login(self, client):
+        response = client.get('/api/reports/example')
+
+        assert response.status_code == 401
+
+    def test_report_metadata_is_scoped_to_owner(self, client):
+        with client.session_transaction() as sess:
+            sess['user_id'] = 2
+
+        response = client.get('/api/reports/example')
+
+        assert response.status_code == 404
+
+    def test_report_metadata_allows_owner(self, authenticated_client):
+        response = authenticated_client.get('/api/reports/example')
+
+        assert response.status_code == 200
+        assert response.get_json() == {
+            'id': 'example',
+            'download_url': '/api/reports/example/secure-download',
+        }
+
 
 class TestLabSetup:
     """Tests for lab setup API endpoints."""

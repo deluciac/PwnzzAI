@@ -2155,5 +2155,21 @@ def list_reports():
     return jsonify({'reports': reports})
 
 
+@application.app.route('/api/reports/<report_id>')
+def get_report(report_id):
+    """Return metadata for a report owned by the authenticated user."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_reports = _REPORTS_BY_USER.get(session['user_id'], {})
+    if report_id not in user_reports:
+        return jsonify({'error': 'Report not found'}), 404
+
+    return jsonify({
+        'id': report_id,
+        'download_url': url_for('secure_download_report', report_id=report_id),
+    })
+
+
 if __name__ == '__main__':
     application.app.run(debug=True)
