@@ -10,6 +10,26 @@ def _sqlite_uri(path: str) -> str:
 # Same directory as the main shop DB (pizza_shop.db): no extra folder required.
 _DEFAULT_CATERING_SQL_URI = _sqlite_uri(os.path.join(_BASE_DIR, "catering_sql_lab.db"))
 _CATERING_SQL_DATABASE_URI = os.environ.get("CATERING_SQL_DATABASE_URI", _DEFAULT_CATERING_SQL_URI)
+_DEVELOPMENT_SECRET_KEY = "dev-secret-key-change-in-production"
+
+
+def _secret_key() -> str:
+    environment = os.environ.get("FLASK_ENV", "").strip().lower()
+    configured_key = os.environ.get("SECRET_KEY")
+
+    if environment == "development":
+        return configured_key or _DEVELOPMENT_SECRET_KEY
+
+    if (
+        not configured_key
+        or configured_key == _DEVELOPMENT_SECRET_KEY
+        or len(configured_key.encode("utf-8")) < 32
+    ):
+        raise RuntimeError(
+            "SECRET_KEY must be supplied externally and contain at least 32 bytes "
+            "outside development"
+        )
+    return configured_key
 
 
 class Config(object):
@@ -25,4 +45,4 @@ class Config(object):
     }
 
     # Secret key for session management
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production"
+    SECRET_KEY = _secret_key()

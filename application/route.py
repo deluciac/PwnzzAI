@@ -2124,10 +2124,13 @@ def secure_download_report(report_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Authentication required'}), 401
 
-    available_reports = {
-        'example': 'example.txt',
+    available_reports_by_user = {
+        1: {
+            'example': 'example.txt',
+        },
     }
-    report_filename = available_reports.get(report_id)
+    user_reports = available_reports_by_user.get(session['user_id'], {})
+    report_filename = user_reports.get(report_id)
     if report_filename is None:
         return jsonify({'error': 'Report not found'}), 404
 

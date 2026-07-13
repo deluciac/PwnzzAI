@@ -14,6 +14,7 @@ sys.path.insert(0, str(project_root))
 # Set environment variable to prevent route initialization during tests
 os.environ['TESTING'] = 'True'
 os.environ.setdefault('OPENAI_MODEL', 'gpt-4o-mini')
+os.environ.setdefault('SECRET_KEY', 'test-secret-key-that-is-at-least-32-bytes')
 
 from application import app, db
 from application.model import User, Pizza, Comment, Order, RoutingFlag
