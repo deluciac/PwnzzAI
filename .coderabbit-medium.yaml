@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+tone_instructions: >-
+  Be concise and security-first. Prioritize exploitable flaws and containment
+  failures; omit cosmetic comments unless they affect security, correctness,
+  or the lab's learning objective.
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_instructions: >-
+    Start with a Security impact section. State whether the PR changes an
+    intentional lab vulnerability, trusted platform code, deployment exposure,
+    secrets, dependencies, or security tests.
+  review_status: true
+  review_details: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 5
+    ignore_title_keywords:
+      - "WIP"
+      - "[skip review]"
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        PwnzzAI is deliberately insecure for education. Prioritize security,
+        then correctness, then maintainability. Rank actionable findings as
+        Critical, High, Medium, or Low. Explain the attack path, impact,
+        evidence, and smallest safe remediation. Do not report style-only issues.
+
+    - path: "application/vulnerabilities/**"
+      instructions: |
+        The advertised weakness in each lab is intentional. Do not flag it
+        solely because it exists. Flag unintended or undocumented weakness
+        classes, escape from the lab boundary, exposure of real secrets or data,
+        harmful external side effects, insecure behavior becoming a default
+        outside the lab, broken exploitability, or weakened hardened examples.
+
+    - path: "application/*.py"
+      instructions: |
+        Treat shared application code as the trusted platform. Focus on
+        authentication, authorization, IDOR, session and CSRF handling,
+        SQL/command/template injection, SSRF, path traversal, unsafe
+        deserialization or upload, secret handling, error leakage, resource
+        limits, LLM timeouts, and tool permissions.
+
+    - path: "application/templates/**"
+      instructions: |
+        Check Jinja autoescaping, unsafe filters, HTML/JavaScript/URL
+        interpolation, CSRF on state-changing forms, and safe rendering of model
+        output. Allow deliberate XSS only when clearly confined to a named lab.
+
+    - path: "**/prompts/**"
+      instructions: |
+        Prompt injection or prompt leakage may be the lesson. Flag real secrets,
+        undocumented trust-boundary changes, unsafe tool authority, untrusted
+        retrieved context crossing into system instructions, or missing bounds
+        on external calls and model consumption.
+
+    - path: "tests/**"
+      instructions: |
+        For lab changes, expect tests for both intended exploit behavior and
+        containment. For trusted-platform changes, expect negative tests for
+        authentication, authorization, validation, data exposure, and failures.
+        Do not recommend fixing a lab by removing its learning objective.
+
+chat:
+  auto_reply: true
