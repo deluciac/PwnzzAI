@@ -2118,5 +2118,22 @@ def download_report():
         return jsonify({'error': f'Unable to download {report_path}: {exc}'}), 404
 
 
+@application.app.route('/api/reports/<report_id>/secure-download')
+def secure_download_report(report_id):
+    """Download an allowlisted report for the authenticated user."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    available_reports = {
+        'example': 'example.txt',
+    }
+    report_filename = available_reports.get(report_id)
+    if report_filename is None:
+        return jsonify({'error': 'Report not found'}), 404
+
+    report_path = os.path.join(application.app.root_path, 'reports', report_filename)
+    return send_file(report_path, as_attachment=True, download_name=report_filename)
+
+
 if __name__ == '__main__':
     application.app.run(debug=True)
