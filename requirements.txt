@@ -21,7 +21,7 @@ faiss-cpu==1.11.0.post1
 requests==2.32.3
 
 # Image Processing & QR Code
-Pillow==11.1.0
+Pillow==12.3.0
 pyzbar==0.1.9
 
 # Environment Variables
