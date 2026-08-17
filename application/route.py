@@ -798,6 +798,13 @@ def catering_rag_poisoning_page():
     return render_template('catering_rag_poisoning.html')
 
 
+@application.app.route('/fake-vulnerable-lab')
+def fake_vulnerable_lab():
+    """Simple fake lab with intentionally insecure patterns for testing static-analysis configs."""
+    from application.vulnerabilities.fake_vulnerable_lab import FAKE_VULNERABLE_DEMO
+    return render_template('fake_vulnerable_lab.html', lab=FAKE_VULNERABLE_DEMO)
+
+
 @application.app.route('/agentic-tools')
 def agentic_tools():
     """Catering agentic SQL / tool routing lab (RAG sibling lives on data poisoning)."""

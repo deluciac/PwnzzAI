@@ -87,6 +87,7 @@
             </li>
             <li class="sidebar-heading">Agents &amp; tools</li>
             <li><a href="{{ url_for('agentic_tools') }}" {% if request.path == url_for('agentic_tools') %}class="active"{% endif %}><i class="fas"></i> <span>Agentic SQL &amp; routing</span></a></li>
+            <li><a href="{{ url_for('fake_vulnerable_lab') }}" {% if request.path == url_for('fake_vulnerable_lab') %}class="active"{% endif %}><i class="fas fa-flask"></i> <span>Fake Vulnerable Lab</span></a></li>
            <li class="sidebar-heading">Others</li>
 
             <li><a href="{{ url_for('glossary') }}" {% if request.path == url_for('glossary') %}class="active"{% endif %}><i class="fas"></i> <span>Glossary</span></a></li>

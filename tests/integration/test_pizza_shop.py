@@ -189,6 +189,12 @@ class TestVulnerabilityPages:
         response = client.get('/data-poisoning')
         assert response.status_code == 200
 
+    def test_fake_vulnerable_lab_page(self, client):
+        """Test the fake vulnerable lab page loads."""
+        response = client.get('/fake-vulnerable-lab')
+        assert response.status_code == 200
+        assert b'Fake Vulnerable Lab' in response.data
+
     def test_catering_rag_poisoning_page(self, client):
         """Test corporate catering RAG lab page loads."""
         response = client.get('/data-poisoning/catering-rag')
